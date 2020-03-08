@@ -1,23 +1,22 @@
 /**
-* @author fourous
-* @date: 2020/3/8
-* @description:
- * 插入排序，通过找到插入点，从数组开始比较，假定第一个元素有序，通过找到插入点，让后续元素相继后移完成排序
-*/
+ * @author fourous
+ * @date: 2020/3/8
+ * @description: 插入排序，通过找到插入点，从数组开始比较，假定第一个元素有序，通过找到插入点，让后续元素相继后移完成排序
+ */
 public class InsertSort {
-    public static void insertSort(int[] intArray){
-        for(int i=1;i<intArray.length;i++){
+    public static void insertSort(int[] intArray) {
+        for (int i = 1; i < intArray.length; i++) {
             int temp = intArray[i];
-            int j=i;
-            while (j>0 && temp < intArray[j-1]){
-                intArray[j]=intArray[j-1];
+            int j = i;
+            while (j > 0 && temp < intArray[j - 1]) {
+                intArray[j] = intArray[j - 1];
                 j--;
             }
-            if(i!=j){
-                intArray[j]=temp;
+            if (i != j) {
+                intArray[j] = temp;
             }
         }
-        for (int k =0;k<intArray.length;k++){
+        for (int k = 0; k < intArray.length; k++) {
             System.out.println(intArray[k]);
         }
     }

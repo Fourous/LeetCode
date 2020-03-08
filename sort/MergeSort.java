@@ -9,7 +9,7 @@ public class MergeSort {
      */
     public static void mergeSort(int[] intArray) {
         sort(intArray, 0, intArray.length - 1);
-        for(int k=0;k<intArray.length;k++){
+        for (int k = 0; k < intArray.length; k++) {
             System.out.println(intArray[k]);
         }
     }
