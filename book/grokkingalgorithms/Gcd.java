@@ -5,7 +5,7 @@ package grokkingalgorithms;
  * @date: 2020/3/17
  * @description: 欧几里得算法也叫辗转相除法，而我们熟知的RSA加密，其实用到了扩展的欧几里得算法
  */
-public class gcd {
+public class Gcd {
     /**
      * 欧几里得算法最容易理解的递归写法
      * 这里其实也不用判断是否ab谁大谁小的问题，网上很多都先做了个交换操作
@@ -94,6 +94,15 @@ public class gcd {
         }
     }
 
+    /**
+     * 欧几里得算法的变种算法，熟知的RSA加密就用到了这个算法
+     *
+     * @param a
+     * @param b
+     * @param x
+     * @param y
+     * @return
+     */
     public static int e_gcd(int a, int b, int x, int y) {
         if (b == 0) {
             x = 1;
