@@ -1,5 +1,6 @@
 package slidingwindow;
 
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.LinkedList;
 
@@ -46,6 +47,7 @@ public class MaxSlideWindow {
      * @param k
      */
     public static int[] slideWindow2(int[] num, int k) {
+        ArrayDeque<Integer> deque = new ArrayDeque<>();
         if (num == null || num.length < 2) {
             return num;
         }
