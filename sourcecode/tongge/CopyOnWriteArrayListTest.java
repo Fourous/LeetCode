@@ -6,7 +6,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * @author fourous
  * @date: 2020/3/27
  * @description: CopyOnWriteArrayList历程
- * 证明相对于ArrayList是线程安全的
+ * TODO 证明相对于ArrayList是线程安全的
  */
 public class CopyOnWriteArrayListTest {
     CopyOnWriteArrayList<Integer> copyOnWriteArrayList = new CopyOnWriteArrayList<>();
