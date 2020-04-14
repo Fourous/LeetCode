@@ -1,5 +1,6 @@
 package tongge;
 
+import java.util.HashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
@@ -13,7 +14,6 @@ public class SemaphoreTest {
     public static final Semaphore SEMAPHORE = new Semaphore(100);
     public static final AtomicInteger failCount = new AtomicInteger(0);
     public static final AtomicInteger successCount = new AtomicInteger(0);
-
     public static void main(String[] args) throws InterruptedException {
         IntStream.range(0, 1000).forEach(i -> new Thread(() -> seckill()).start());
     }
