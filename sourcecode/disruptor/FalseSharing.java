@@ -1,5 +1,6 @@
 package disruptor;
 
+import com.javamex.classmexer.MemoryUtil;
 import sun.misc.Contended;
 
 /**
@@ -26,7 +27,9 @@ public class FalseSharing implements Runnable {
             runTest(i);
             System.out.println("Thread num " + i + " duration = " + (System.currentTimeMillis() - start));
         }
-
+        System.out.println("Shallow Size: " + MemoryUtil.memoryUsageOf(FalseSharing.class) + " bytes");
+        // 打印对象的 retained size
+        System.out.println("Retained Size: " + MemoryUtil.deepMemoryUsageOf(FalseSharing.class) + " bytes");
     }
 
     private static void runTest(int NUM_THREADS) throws InterruptedException {
