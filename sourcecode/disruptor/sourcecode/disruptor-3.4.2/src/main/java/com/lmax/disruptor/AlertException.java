@@ -37,7 +37,7 @@ public final class AlertException extends Exception
 
     /**
      * Overridden so the stack trace is not filled in for this exception for performance reasons.
-     *
+     * 只要那个自定义异常类型是真的不需要stack trace的，推荐覆写fillInStackTrace()为直接返回this
      * @return this instance.
      */
     @Override

@@ -21,12 +21,14 @@ package com.lmax.disruptor;
  * Look at using the {@link EventHandler} interface along with the pre-supplied BatchEventProcessor in the first
  * instance.
  * <p>
+ * 事件处理器会等待RingBuffer中的事件变为可用(可处理)，然后处理可用的事件。
+ * 一个事件处理器通常会关联一个线程。
  * An EventProcessor will generally be associated with a Thread for execution.
  */
-public interface EventProcessor extends Runnable
-{
+public interface EventProcessor extends Runnable {
     /**
      * Get a reference to the {@link Sequence} being used by this {@link EventProcessor}.
+     * 获取一个事件处理器使用的序列引用
      *
      * @return reference to the {@link Sequence} for this {@link EventProcessor}
      */
@@ -38,5 +40,10 @@ public interface EventProcessor extends Runnable
      */
     void halt();
 
+    /**
+     * 检测状态
+     *
+     * @return
+     */
     boolean isRunning();
 }

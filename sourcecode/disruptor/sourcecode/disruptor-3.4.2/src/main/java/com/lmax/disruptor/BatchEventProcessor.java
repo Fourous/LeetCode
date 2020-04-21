@@ -24,22 +24,44 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * If the {@link EventHandler} also implements {@link LifecycleAware} it will be notified just after the thread
  * is started and just before the thread is shutdown.
+ * 1. BatchEventProcessor内部会记录自己的序列、运行状态。
+ * 2. BatchEventProcessor需要外部提供数据提供者(其实就是队列-RingBuffer)、序列栅栏、异常处理器。
+ * 3. BatchEventProcessor其实是将事件委托给内部的EventHandler来处理的
  *
  * @param <T> event implementation storing the data for sharing during exchange or parallel coordination of an event.
  */
-public final class BatchEventProcessor<T>
-    implements EventProcessor
-{
+public final class BatchEventProcessor<T> implements EventProcessor {
     private static final int IDLE = 0;
     private static final int HALTED = IDLE + 1;
     private static final int RUNNING = HALTED + 1;
-
+    /**
+     * 表示当前事件处理器的运行状态
+     * 这里之前版本是用的AtomicBoolean存储的状态现在用Integer存储
+     */
     private final AtomicInteger running = new AtomicInteger(IDLE);
+    /**
+     * 异常处理器
+     */
     private ExceptionHandler<? super T> exceptionHandler = new FatalExceptionHandler();
+    /**
+     * 数据提供者(RingBuffer)
+     */
     private final DataProvider<T> dataProvider;
+    /**
+     * 序列栅栏
+     */
     private final SequenceBarrier sequenceBarrier;
+    /**
+     * 真正处理事件的回调接口
+     */
     private final EventHandler<? super T> eventHandler;
+    /**
+     * 事件处理器使用的序列
+     */
     private final Sequence sequence = new Sequence(Sequencer.INITIAL_CURSOR_VALUE);
+    /**
+     * 超时回调接口
+     */
     private final TimeoutHandler timeoutHandler;
     private final BatchStartAware batchStartAware;
 
@@ -52,41 +74,41 @@ public final class BatchEventProcessor<T>
      * @param eventHandler    is the delegate to which events are dispatched.
      */
     public BatchEventProcessor(
-        final DataProvider<T> dataProvider,
-        final SequenceBarrier sequenceBarrier,
-        final EventHandler<? super T> eventHandler)
-    {
+            final DataProvider<T> dataProvider,
+            final SequenceBarrier sequenceBarrier,
+            final EventHandler<? super T> eventHandler) {
         this.dataProvider = dataProvider;
         this.sequenceBarrier = sequenceBarrier;
         this.eventHandler = eventHandler;
 
-        if (eventHandler instanceof SequenceReportingEventHandler)
-        {
+        if (eventHandler instanceof SequenceReportingEventHandler) {
             ((SequenceReportingEventHandler<?>) eventHandler).setSequenceCallback(sequence);
         }
 
         batchStartAware =
-            (eventHandler instanceof BatchStartAware) ? (BatchStartAware) eventHandler : null;
+                (eventHandler instanceof BatchStartAware) ? (BatchStartAware) eventHandler : null;
         timeoutHandler =
-            (eventHandler instanceof TimeoutHandler) ? (TimeoutHandler) eventHandler : null;
+                (eventHandler instanceof TimeoutHandler) ? (TimeoutHandler) eventHandler : null;
     }
 
     @Override
-    public Sequence getSequence()
-    {
+    public Sequence getSequence() {
         return sequence;
     }
 
     @Override
-    public void halt()
-    {
+    public void halt() {
+        /**
+         * 之前版本使用的直接设置位false
+         * 现在使用的数字来标志
+         */
         running.set(HALTED);
+        // 通知序列栅栏
         sequenceBarrier.alert();
     }
 
     @Override
-    public boolean isRunning()
-    {
+    public boolean isRunning() {
         return running.get() != IDLE;
     }
 
@@ -95,10 +117,8 @@ public final class BatchEventProcessor<T>
      *
      * @param exceptionHandler to replace the existing exceptionHandler.
      */
-    public void setExceptionHandler(final ExceptionHandler<? super T> exceptionHandler)
-    {
-        if (null == exceptionHandler)
-        {
+    public void setExceptionHandler(final ExceptionHandler<? super T> exceptionHandler) {
+        if (null == exceptionHandler) {
             throw new NullPointerException();
         }
 
@@ -111,103 +131,83 @@ public final class BatchEventProcessor<T>
      * @throws IllegalStateException if this object instance is already running in a thread
      */
     @Override
-    public void run()
-    {
-        if (running.compareAndSet(IDLE, RUNNING))
-        {
+    public void run() {
+        if (running.compareAndSet(IDLE, RUNNING)) {
+            // 先清除序列栅栏的通知状态
             sequenceBarrier.clearAlert();
-
+            // 如果eventHandler实现了LifecycleAware，这里会对其进行一个启动通知
             notifyStart();
-            try
-            {
-                if (running.get() == RUNNING)
-                {
+            try {
+                if (running.get() == RUNNING) {
                     processEvents();
                 }
-            }
-            finally
-            {
+            } finally {
                 notifyShutdown();
                 running.set(IDLE);
             }
-        }
-        else
-        {
+        } else {
             // This is a little bit of guess work.  The running state could of changed to HALTED by
             // this point.  However, Java does not have compareAndExchange which is the only way
             // to get it exactly correct.
-            if (running.get() == RUNNING)
-            {
+            if (running.get() == RUNNING) {
                 throw new IllegalStateException("Thread is already running");
-            }
-            else
-            {
+            } else {
                 earlyExit();
             }
         }
     }
 
-    private void processEvents()
-    {
+    private void processEvents() {
         T event = null;
+        // 获取要申请的序列
         long nextSequence = sequence.get() + 1L;
 
-        while (true)
-        {
-            try
-            {
+        while (true) {
+            try {
+                // 通过序列栅栏来等待可用的序列值
                 final long availableSequence = sequenceBarrier.waitFor(nextSequence);
-                if (batchStartAware != null)
-                {
+                if (batchStartAware != null) {
                     batchStartAware.onBatchStart(availableSequence - nextSequence + 1);
                 }
-
-                while (nextSequence <= availableSequence)
-                {
+                // 得到可用的序列值后，批量处理nextSequence到availableSequence之间的事件
+                while (nextSequence <= availableSequence) {
+                    // 获取事件
                     event = dataProvider.get(nextSequence);
+                    // 将事件交给eventHandler处理
                     eventHandler.onEvent(event, nextSequence, nextSequence == availableSequence);
                     nextSequence++;
                 }
-
+                // 处理完毕后，设置当前处理完成的最后序列值
                 sequence.set(availableSequence);
-            }
-            catch (final TimeoutException e)
-            {
+            } catch (final TimeoutException e) {
+                // 如果发生超时，通知一下超时处理器(如果eventHandler同时实现了timeoutHandler，会将其设置为当前的超时处理器
                 notifyTimeout(sequence.get());
-            }
-            catch (final AlertException ex)
-            {
-                if (running.get() != RUNNING)
-                {
+            } catch (final AlertException ex) {
+                // 如果捕获了序列栅栏变更通知，并且当前事件处理器停止了，那么退出主循环
+                if (running.get() != RUNNING) {
                     break;
                 }
-            }
-            catch (final Throwable ex)
-            {
+            } catch (final Throwable ex) {
+                // 其他的异常都交给异常处理器进行处理
                 exceptionHandler.handleEventException(ex, nextSequence, event);
+                // 处理异常后仍然会设置当前处理的最后的序列值，然后继续处理其他事件
                 sequence.set(nextSequence);
                 nextSequence++;
             }
         }
     }
 
-    private void earlyExit()
-    {
+    private void earlyExit() {
         notifyStart();
         notifyShutdown();
     }
 
-    private void notifyTimeout(final long availableSequence)
-    {
-        try
-        {
-            if (timeoutHandler != null)
-            {
+    private void notifyTimeout(final long availableSequence) {
+        try {
+            if (timeoutHandler != null) {
                 timeoutHandler.onTimeout(availableSequence);
             }
-        }
-        catch (Throwable e)
-        {
+        } catch (Throwable e) {
             exceptionHandler.handleEventException(e, availableSequence, null);
         }
     }
@@ -215,16 +215,11 @@ public final class BatchEventProcessor<T>
     /**
      * Notifies the EventHandler when this processor is starting up
      */
-    private void notifyStart()
-    {
-        if (eventHandler instanceof LifecycleAware)
-        {
-            try
-            {
+    private void notifyStart() {
+        if (eventHandler instanceof LifecycleAware) {
+            try {
                 ((LifecycleAware) eventHandler).onStart();
-            }
-            catch (final Throwable ex)
-            {
+            } catch (final Throwable ex) {
                 exceptionHandler.handleOnStartException(ex);
             }
         }
@@ -233,16 +228,11 @@ public final class BatchEventProcessor<T>
     /**
      * Notifies the EventHandler immediately prior to this processor shutting down
      */
-    private void notifyShutdown()
-    {
-        if (eventHandler instanceof LifecycleAware)
-        {
-            try
-            {
+    private void notifyShutdown() {
+        if (eventHandler instanceof LifecycleAware) {
+            try {
                 ((LifecycleAware) eventHandler).onShutdown();
-            }
-            catch (final Throwable ex)
-            {
+            } catch (final Throwable ex) {
                 exceptionHandler.handleOnShutdownException(ex);
             }
         }

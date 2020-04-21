@@ -21,9 +21,10 @@ import com.lmax.disruptor.util.Util;
 
 /**
  * Hides a group of Sequences behind a single Sequence
+ * 虽然继承了Sequence，但是只是包装了get，获取内部序列组中最小的序列值
+ * 但是无法做任何写操作
  */
-public final class FixedSequenceGroup extends Sequence
-{
+public final class FixedSequenceGroup extends Sequence {
     private final Sequence[] sequences;
 
     /**
@@ -31,8 +32,7 @@ public final class FixedSequenceGroup extends Sequence
      *
      * @param sequences the list of sequences to be tracked under this sequence group
      */
-    public FixedSequenceGroup(Sequence[] sequences)
-    {
+    public FixedSequenceGroup(Sequence[] sequences) {
         this.sequences = Arrays.copyOf(sequences, sequences.length);
     }
 
@@ -42,14 +42,12 @@ public final class FixedSequenceGroup extends Sequence
      * @return the minimum sequence value for the group.
      */
     @Override
-    public long get()
-    {
+    public long get() {
         return Util.getMinimumSequence(sequences);
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return Arrays.toString(sequences);
     }
 
@@ -57,8 +55,7 @@ public final class FixedSequenceGroup extends Sequence
      * Not supported.
      */
     @Override
-    public void set(long value)
-    {
+    public void set(long value) {
         throw new UnsupportedOperationException();
     }
 
@@ -66,8 +63,7 @@ public final class FixedSequenceGroup extends Sequence
      * Not supported.
      */
     @Override
-    public boolean compareAndSet(long expectedValue, long newValue)
-    {
+    public boolean compareAndSet(long expectedValue, long newValue) {
         throw new UnsupportedOperationException();
     }
 
@@ -75,8 +71,7 @@ public final class FixedSequenceGroup extends Sequence
      * Not supported.
      */
     @Override
-    public long incrementAndGet()
-    {
+    public long incrementAndGet() {
         throw new UnsupportedOperationException();
     }
 
@@ -84,8 +79,7 @@ public final class FixedSequenceGroup extends Sequence
      * Not supported.
      */
     @Override
-    public long addAndGet(long increment)
-    {
+    public long addAndGet(long increment) {
         throw new UnsupportedOperationException();
     }
 }

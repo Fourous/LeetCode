@@ -27,30 +27,26 @@ import com.lmax.disruptor.util.ThreadHints;
  * the lock is uncontended.  Shows performance improvements on microbenchmarks.  However this
  * wait strategy should be considered experimental as I have not full proved the correctness of
  * the lock elision code.
+ * LiteBlockingWaitStrategy的实现方法也是阻塞等待，但它会减少一些不必要的唤醒。
+ * 从源码的注释上看，这个策略在基准性能测试上是会表现出一些性能提升，但是作者还不能完全证明程序的正确性。
  */
-public final class LiteBlockingWaitStrategy implements WaitStrategy
-{
+public final class LiteBlockingWaitStrategy implements WaitStrategy {
     private final Lock lock = new ReentrantLock();
     private final Condition processorNotifyCondition = lock.newCondition();
     private final AtomicBoolean signalNeeded = new AtomicBoolean(false);
 
     @Override
     public long waitFor(long sequence, Sequence cursorSequence, Sequence dependentSequence, SequenceBarrier barrier)
-        throws AlertException, InterruptedException
-    {
+            throws AlertException, InterruptedException {
         long availableSequence;
-        if (cursorSequence.get() < sequence)
-        {
+        if (cursorSequence.get() < sequence) {
             lock.lock();
 
-            try
-            {
-                do
-                {
+            try {
+                do {
                     signalNeeded.getAndSet(true);
 
-                    if (cursorSequence.get() >= sequence)
-                    {
+                    if (cursorSequence.get() >= sequence) {
                         break;
                     }
 
@@ -58,15 +54,12 @@ public final class LiteBlockingWaitStrategy implements WaitStrategy
                     processorNotifyCondition.await();
                 }
                 while (cursorSequence.get() < sequence);
-            }
-            finally
-            {
+            } finally {
                 lock.unlock();
             }
         }
 
-        while ((availableSequence = dependentSequence.get()) < sequence)
-        {
+        while ((availableSequence = dependentSequence.get()) < sequence) {
             barrier.checkAlert();
             ThreadHints.onSpinWait();
         }
@@ -75,27 +68,21 @@ public final class LiteBlockingWaitStrategy implements WaitStrategy
     }
 
     @Override
-    public void signalAllWhenBlocking()
-    {
-        if (signalNeeded.getAndSet(false))
-        {
+    public void signalAllWhenBlocking() {
+        if (signalNeeded.getAndSet(false)) {
             lock.lock();
-            try
-            {
+            try {
                 processorNotifyCondition.signalAll();
-            }
-            finally
-            {
+            } finally {
                 lock.unlock();
             }
         }
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return "LiteBlockingWaitStrategy{" +
-            "processorNotifyCondition=" + processorNotifyCondition +
-            '}';
+                "processorNotifyCondition=" + processorNotifyCondition +
+                '}';
     }
 }

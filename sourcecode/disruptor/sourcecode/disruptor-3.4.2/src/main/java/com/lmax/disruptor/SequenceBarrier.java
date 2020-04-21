@@ -19,11 +19,12 @@ package com.lmax.disruptor;
 /**
  * Coordination barrier for tracking the cursor for publishers and sequence of
  * dependent {@link EventProcessor}s for processing a data structure
+ * 这个是提供给事件处理者用的
  */
-public interface SequenceBarrier
-{
+public interface SequenceBarrier {
     /**
      * Wait for the given sequence to be available for consumption.
+     * 等待一个序列变为可用，然后消费这个序列
      *
      * @param sequence to wait for
      * @return the sequence up to which is available
@@ -35,6 +36,7 @@ public interface SequenceBarrier
 
     /**
      * Get the current cursor value that can be read.
+     * 获取当前可以读取的序列值
      *
      * @return value of the cursor for entries that have been published.
      */
@@ -42,23 +44,27 @@ public interface SequenceBarrier
 
     /**
      * The current alert status for the barrier.
+     * 当前栅栏是否发过通知。
      *
      * @return true if in alert otherwise false.
      */
     boolean isAlerted();
 
     /**
+     * 通知事件处理者状态变化，然后停留在这个状态上，直到状态被清除
      * Alert the {@link EventProcessor}s of a status change and stay in this status until cleared.
      */
     void alert();
 
     /**
+     * 清楚通知状态
      * Clear the current alert status.
      */
     void clearAlert();
 
     /**
      * Check if an alert has been raised and throw an {@link AlertException} if it has.
+     * 检测是否发生了通知，如果已经发生了抛出AlertException异常
      *
      * @throws AlertException if alert has been raised.
      */

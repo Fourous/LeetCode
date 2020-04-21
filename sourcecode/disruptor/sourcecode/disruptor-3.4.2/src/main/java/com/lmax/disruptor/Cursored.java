@@ -19,6 +19,7 @@ package com.lmax.disruptor;
  * Implementors of this interface must provide a single long value
  * that represents their current cursor value.  Used during dynamic
  * add/remove of Sequences from a
+ * Cursored接口只提供了一个获取当前序列值(游标)的方法
  * {@link SequenceGroups#addSequences(Object, java.util.concurrent.atomic.AtomicReferenceFieldUpdater, Cursored, Sequence...)}.
  */
 public interface Cursored

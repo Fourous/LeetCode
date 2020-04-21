@@ -22,3 +22,4 @@ Apache Storm、Camel、Log4j 2在内的很多知名项目都应用了Disruptor�
 a%b 
 
 在程序中我们可以使用a&(b-1)做位运算，速度要比取模要快得多，HashMap中就是使用这个来定位数组元素的
+

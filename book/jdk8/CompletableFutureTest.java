@@ -17,6 +17,7 @@ public class CompletableFutureTest {
     public static void main(String[] args) throws Exception {
 
         CompletableFuture<Double> completableFuture = CompletableFuture.supplyAsync(CompletableFutureTest::fetchPrice);
+        System.out.println("complete is running");
         completableFuture.thenAccept((result) -> {
             System.out.println("price is " + result);
         });
@@ -25,6 +26,8 @@ public class CompletableFutureTest {
             e.printStackTrace();
             return null;
         });
+        // 证明确实是异步执行，运行了main以后，才返回price
+        System.out.println("main is running");
         Thread.sleep(2000);
     }
 
